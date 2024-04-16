@@ -307,6 +307,7 @@ open class ImagePicker {
                     },
                     dismissListener
                 )
+
             } else {
                 onResult(createIntent())
             }
