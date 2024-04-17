@@ -1,12 +1,6 @@
 package com.github.dhaval2404.imagepicker
 
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Bundle
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
 import com.github.dhaval2404.imagepicker.constant.ImageProvider
 import com.github.dhaval2404.imagepicker.provider.CameraProvider
 import com.github.dhaval2404.imagepicker.provider.CompressionProvider
@@ -21,17 +15,25 @@ import com.github.dhaval2404.imagepicker.util.FileUriUtils
  * @version 1.0
  * @since 04 January 2019
  */
+import android.Manifest
+import android.content.Intent
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+/*import com.example.imagepicker.ImagePicker
+import com.example.imagepicker.utils.FileUriUtils*/
+
 class ImagePickerActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "image_picker"
-
-        internal fun getCancelledIntent(context: Context): Intent {
-            val intent = Intent()
-            val message = context.getString(R.string.error_task_cancelled)
-            intent.putExtra(ImagePicker.EXTRA_ERROR, message)
-            return intent
-        }
+        private const val REQUEST_CODE_STORAGE_PERMISSION = 100
     }
 
     private var mGalleryProvider: GalleryProvider? = null
@@ -44,19 +46,7 @@ class ImagePickerActivity : AppCompatActivity() {
         loadBundle(savedInstanceState)
     }
 
-    /**
-     * Save all appropriate activity state.
-     */
-    public override fun onSaveInstanceState(outState: Bundle) {
-        mCameraProvider?.onSaveInstanceState(outState)
-        mCropProvider.onSaveInstanceState(outState)
-        super.onSaveInstanceState(outState)
-    }
-
-    /**
-     * Parse Intent Bundle and initialize variables
-     */
-    private fun loadBundle(savedInstanceState: Bundle?) {
+   /* private fun loadBundle(savedInstanceState: Bundle?) {
         // Create Crop Provider
         mCropProvider = CropProvider(this)
         mCropProvider.onRestoreInstanceState(savedInstanceState)
@@ -64,46 +54,108 @@ class ImagePickerActivity : AppCompatActivity() {
         // Create Compression Provider
         mCompressionProvider = CompressionProvider(this)
 
-        // Retrieve Image Provider
+        // Check and request permissions based on Android version
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // Marshmallow and above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13 (API level 33) and above
+                // Request permission only for accessing photos
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_IMAGES), REQUEST_CODE_STORAGE_PERMISSION)
+                } else {
+                    initImageProvider(savedInstanceState)
+                }
+            } else {
+                // Request permission for accessing photos and videos
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_STORAGE_PERMISSION)
+                } else {
+                    initImageProvider(savedInstanceState)
+                }
+            }
+        } else {
+            // For devices below Marshmallow, permissions are granted at installation
+            initImageProvider(savedInstanceState)
+        }
+    }*/
+
+    private fun loadBundle(savedInstanceState: Bundle?) {
+
+        mCropProvider = CropProvider(this)
+        mCropProvider.onRestoreInstanceState(savedInstanceState)
+
+
+        mCompressionProvider = CompressionProvider(this)
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >=33) {
+                // Android 13 and above photos only
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                        REQUEST_CODE_STORAGE_PERMISSION
+                    )
+                } else {
+                    initImageProvider(savedInstanceState)
+                }
+            } else {
+                // Android 12 and below
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                        REQUEST_CODE_STORAGE_PERMISSION
+                    )
+                } else {
+                    initImageProvider(savedInstanceState)
+                }
+            }
+        } else {
+            initImageProvider(savedInstanceState)
+        }
+    }
+
+
+
+
+
+    private fun initImageProvider(savedInstanceState: Bundle?) {
         val provider: ImageProvider? =
             intent?.getSerializableExtra(ImagePicker.EXTRA_IMAGE_PROVIDER) as ImageProvider?
 
-        // Create Gallery/Camera Provider
         when (provider) {
             ImageProvider.GALLERY -> {
                 mGalleryProvider = GalleryProvider(this)
-                // Pick Gallery Image
                 savedInstanceState ?: mGalleryProvider?.startIntent()
             }
             ImageProvider.CAMERA -> {
                 mCameraProvider = CameraProvider(this)
-                mCameraProvider?.onRestoreInstanceState(savedInstanceState)
-                // Pick Camera Image
                 savedInstanceState ?: mCameraProvider?.startIntent()
             }
             else -> {
-                // Something went Wrong! This case should never happen
-                Log.e(TAG, "Image provider can not be null")
+                Log.e(TAG, "Image provider cannot be null")
                 setError(getString(R.string.error_task_cancelled))
             }
         }
     }
 
-    /**
-     * Dispatch incoming result to the correct provider.
-     */
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        mCameraProvider?.onRequestPermissionsResult(requestCode)
+        if (requestCode == REQUEST_CODE_STORAGE_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initImageProvider(null)
+            } else {
+                setError("Permission denied")
+            }
+        }
     }
 
-    /**
-     * Dispatch incoming result to the correct provider.
-     */
+    override fun onSaveInstanceState(outState: Bundle) {
+        mCameraProvider?.onSaveInstanceState(outState)
+        mCropProvider.onSaveInstanceState(outState)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         mCameraProvider?.onActivityResult(requestCode, resultCode, data)
@@ -111,18 +163,10 @@ class ImagePickerActivity : AppCompatActivity() {
         mCropProvider.onActivityResult(requestCode, resultCode, data)
     }
 
-    /**
-     * Handle Activity Back Press
-     */
     override fun onBackPressed() {
         setResultCancel()
     }
 
-    /**
-     * {@link CameraProvider} and {@link GalleryProvider} Result will be available here.
-     *
-     * @param uri Capture/Gallery image Uri
-     */
     fun setImage(uri: Uri) {
         when {
             mCropProvider.isCropEnabled() -> mCropProvider.startIntent(uri)
@@ -131,16 +175,7 @@ class ImagePickerActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * {@link CropProviders} Result will be available here.
-     *
-     * Check if compression is enable/required. If yes then start compression else return result.
-     *
-     * @param uri Crop image uri
-     */
     fun setCropImage(uri: Uri) {
-        // Delete Camera file after crop. Else there will be two image for the same action.
-        // In case of Gallery Provider, we will get original image path, so we will not delete that.
         mCameraProvider?.delete()
 
         if (mCompressionProvider.isCompressionRequired(uri)) {
@@ -150,29 +185,12 @@ class ImagePickerActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * {@link CompressionProvider} Result will be available here.
-     *
-     * @param uri Compressed image Uri
-     */
     fun setCompressedImage(uri: Uri) {
-        // This is the case when Crop is not enabled
-
-        // Delete Camera file after crop. Else there will be two image for the same action.
-        // In case of Gallery Provider, we will get original image path, so we will not delete that.
         mCameraProvider?.delete()
-
-        // If crop file is not null, Delete it after crop
         mCropProvider.delete()
-
         setResult(uri)
     }
 
-    /**
-     * Set Result, Image is successfully capture/picked/cropped/compressed.
-     *
-     * @param uri final image Uri
-     */
     private fun setResult(uri: Uri) {
         val intent = Intent()
         intent.data = uri
@@ -181,23 +199,22 @@ class ImagePickerActivity : AppCompatActivity() {
         finish()
     }
 
-    /**
-     * User has cancelled the task
-     */
     fun setResultCancel() {
         setResult(Activity.RESULT_CANCELED, getCancelledIntent(this))
         finish()
     }
 
-    /**
-     * Error occurred while processing image
-     *
-     * @param message Error Message
-     */
     fun setError(message: String) {
         val intent = Intent()
         intent.putExtra(ImagePicker.EXTRA_ERROR, message)
         setResult(ImagePicker.RESULT_ERROR, intent)
         finish()
+    }
+
+    internal fun getCancelledIntent(context: Context): Intent {
+        val intent = Intent()
+        val message = context.getString(R.string.error_task_cancelled)
+        intent.putExtra(ImagePicker.EXTRA_ERROR, message)
+        return intent
     }
 }

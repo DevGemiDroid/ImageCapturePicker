@@ -13,7 +13,7 @@ import java.io.File
  * @version 1.0
  * @since 04 January 2019
  */
-abstract class BaseProvider(protected val activity: ImagePickerActivity) :
+abstract class BaseProvider(protected open val activity: ImagePickerActivity) :
     ContextWrapper(activity) {
 
     fun getFileDir(path: String?): File {
