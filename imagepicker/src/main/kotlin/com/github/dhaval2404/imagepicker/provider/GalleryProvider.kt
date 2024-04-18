@@ -1,9 +1,14 @@
 package com.github.dhaval2404.imagepicker.provider
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.github.dhaval2404.imagepicker.ImagePicker
 import com.github.dhaval2404.imagepicker.ImagePickerActivity
 import com.github.dhaval2404.imagepicker.R
@@ -16,6 +21,89 @@ import com.github.dhaval2404.imagepicker.util.IntentUtils
  * @version 1.0
  * @since 04 January 2019
  */
+
+
+class GalleryProvider(override val activity: ImagePickerActivity) : BaseProvider(activity) {
+
+    companion object {
+        private const val GALLERY_INTENT_REQ_CODE = 4261
+        private const val PERMISSION_REQUEST_CODE = 200
+    }
+
+    private val mimeTypes: Array<String> = activity.intent.extras?.getStringArray(ImagePicker.EXTRA_MIME_TYPES) ?: emptyArray()
+
+    fun startIntent() {
+        if (isPermissionGranted()) {
+            startGalleryIntent()
+        } else {
+            requestPermissions()
+        }
+    }
+
+    private fun isPermissionGranted(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        return ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestPermissions() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        ActivityCompat.requestPermissions(activity, arrayOf(permission), PERMISSION_REQUEST_CODE)
+    }
+
+    private fun startGalleryIntent() {
+        val galleryIntent = IntentUtils.getGalleryIntent(activity, mimeTypes)
+        activity.startActivityForResult(galleryIntent, GALLERY_INTENT_REQ_CODE)
+    }
+
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == GALLERY_INTENT_REQ_CODE && resultCode == Activity.RESULT_OK) {
+            handleResult(data)
+        } else {
+            setResultCancel()
+        }
+    }
+
+    private fun handleResult(data: Intent?) {
+        val uri = data?.data
+        if (uri != null) {
+            takePersistableUriPermission(uri)
+            activity.setImage(uri)
+        } else {
+            setError(R.string.error_failed_pick_gallery_image)
+        }
+    }
+
+    private fun takePersistableUriPermission(uri: Uri) {
+        val contentResolver = activity.contentResolver
+        contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 class GalleryProvider(activity: ImagePickerActivity) :
     BaseProvider(activity) {
 
@@ -33,28 +121,34 @@ class GalleryProvider(activity: ImagePickerActivity) :
         mimeTypes = bundle.getStringArray(ImagePicker.EXTRA_MIME_TYPES) ?: emptyArray()
     }
 
-    /**
+    */
+/**
      * Start Gallery Capture Intent
-     */
+     *//*
+
     fun startIntent() {
         startGalleryIntent()
     }
 
-    /**
+    */
+/**
      * Start Gallery Intent
-     */
+     *//*
+
     private fun startGalleryIntent() {
         val galleryIntent = IntentUtils.getGalleryIntent(activity, mimeTypes)
         activity.startActivityForResult(galleryIntent, GALLERY_INTENT_REQ_CODE)
     }
 
-    /**
+    */
+/**
      * Handle Gallery Intent Activity Result
      *
      * @param requestCode It must be {@link GalleryProvider#GALLERY_INTENT_REQ_CODE}
      * @param resultCode For success it should be {@link Activity#RESULT_OK}
      * @param data Result Intent
-     */
+     *//*
+
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == GALLERY_INTENT_REQ_CODE) {
             if (resultCode == Activity.RESULT_OK) {
@@ -65,9 +159,11 @@ class GalleryProvider(activity: ImagePickerActivity) :
         }
     }
 
-    /**
+    */
+/**
      * This method will be called when final result fot this provider is enabled.
-     */
+     *//*
+
     private fun handleResult(data: Intent?) {
         val uri = data?.data
         if (uri != null) {
@@ -78,11 +174,14 @@ class GalleryProvider(activity: ImagePickerActivity) :
         }
     }
 
-    /**
+    */
+/**
      * Take a persistable URI permission grant that has been offered. Once
      * taken, the permission grant will be remembered across device reboots.
-     */
+     *//*
+
     private fun takePersistableUriPermission(uri: Uri) {
         contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 }
+*/

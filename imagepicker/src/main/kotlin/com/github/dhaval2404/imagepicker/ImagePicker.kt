@@ -306,7 +306,8 @@ open class ImagePicker {
                         }
                     },
                     dismissListener
-                )
+                ,activity)
+
             } else {
                 onResult(createIntent())
             }
@@ -328,7 +329,7 @@ open class ImagePicker {
                     }
                 },
                 dismissListener
-            )
+           ,activity )
         }
 
         /**
