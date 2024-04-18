@@ -81,8 +81,6 @@ class ImagePickerActivity : AppCompatActivity() {
 
         mCropProvider = CropProvider(this)
         mCropProvider.onRestoreInstanceState(savedInstanceState)
-
-
         mCompressionProvider = CompressionProvider(this)
 
 
